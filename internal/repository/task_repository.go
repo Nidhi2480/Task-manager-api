@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"task-manager/internal/models"
 	"time"
@@ -21,6 +22,10 @@ type TaskRepository interface {
 type taskRepository struct {
 	db *sql.DB
 }
+
+var (
+	ErrTaskNotFound = errors.New("task not found")
+)
 
 func NewTaskRepository(db *sql.DB) TaskRepository {
 	return &taskRepository{db: db}
@@ -143,14 +148,38 @@ func (r *taskRepository) MarkComplete(ctx context.Context, id int64) error {
 				WHERE id = $2
 			`
 
-	_, err := r.db.ExecContext(ctx, query, time.Now(), id)
+	res, err := r.db.ExecContext(ctx, query, time.Now(), id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrTaskNotFound
+	}
 
 	return err
 }
 
 func (r *taskRepository) Delete(ctx context.Context, id int64) error {
 	query := `DELETE FROM tasks WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id)
+	res, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrTaskNotFound
+	}
 
 	return err
 }

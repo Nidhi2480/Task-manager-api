@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"task-manager/internal/models"
+	"task-manager/internal/repository"
 	"task-manager/internal/services"
 
 	"github.com/gorilla/mux"
@@ -145,7 +146,7 @@ func (h *TaskHandler) MarkTaskComplete(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.MarkTaskComplete(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, services.ErrTaskNotFound) {
+		if errors.Is(err, repository.ErrTaskNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -168,7 +169,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.DeleteTask(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, services.ErrTaskNotFound) {
+		if errors.Is(err, repository.ErrTaskNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
