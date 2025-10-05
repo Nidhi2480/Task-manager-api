@@ -29,12 +29,12 @@ func (m *MockTaskRepository) GetByID(ctx context.Context, id int64) (*models.Tas
 	return args.Get(0).(*models.Task), args.Error(1)
 }
 
-func (m *MockTaskRepository) GetAll(ctx context.Context) ([]*models.Task, error) {
+func (m *MockTaskRepository) GetAll(ctx context.Context, limit, offset int) ([]*models.Task, int, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
-		return nil, args.Error(1)
+		return nil, 0, args.Error(1)
 	}
-	return args.Get(0).([]*models.Task), args.Error(1)
+	return args.Get(0).([]*models.Task), 0, args.Error(1)
 }
 
 func (m *MockTaskRepository) Update(ctx context.Context, task *models.Task) error {
@@ -133,7 +133,7 @@ func TestTaskServiceMethods(t *testing.T) {
 
 	t.Run("GetAllTasks", func(t *testing.T) {
 		mockRepo.On("GetAll", mock.Anything).Return([]*models.Task{task}, nil).Once()
-		tasks, err := service.GetAllTasks(context.Background())
+		tasks, _, err := service.GetAllTasks(context.Background(), 1, 1)
 		assert.NoError(t, err)
 		assert.Len(t, tasks, 1)
 		mockRepo.AssertExpectations(t)

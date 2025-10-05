@@ -11,7 +11,7 @@ import (
 type TaskRepository interface {
 	Create(ctx context.Context, task *models.Task) error
 	GetByID(ctx context.Context, id int64) (*models.Task, error)
-	GetAll(ctx context.Context) ([]*models.Task, error)
+	GetAll(ctx context.Context, limit, offset int) ([]*models.Task, int, error)
 	Update(ctx context.Context, task *models.Task) error
 	MarkComplete(ctx context.Context, id int64) error
 	Delete(ctx context.Context, id int64) error
@@ -78,15 +78,21 @@ func (r *taskRepository) GetByID(ctx context.Context, id int64) (*models.Task, e
 
 	return task, nil
 }
-
-func (r *taskRepository) GetAll(ctx context.Context) ([]*models.Task, error) {
-	query := `SELECT id, title, description, due_date, is_completed, created_at, updated_at
-				FROM tasks
-				ORDER BY created_at DESC`
-
-	rows, err := r.db.QueryContext(ctx, query)
+func (r *taskRepository) GetAll(ctx context.Context, limit, offset int) ([]*models.Task, int, error) {
+	var total int
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM tasks`).Scan(&total)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	query := `SELECT id, title, description, due_date, is_completed, created_at, updated_at
+          FROM tasks
+          ORDER BY created_at DESC
+          LIMIT $1 OFFSET $2`
+
+	rows, err := r.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -103,12 +109,12 @@ func (r *taskRepository) GetAll(ctx context.Context) ([]*models.Task, error) {
 			&task.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		tasks = append(tasks, task)
 	}
 
-	return tasks, nil
+	return tasks, total, nil
 }
 
 func (r *taskRepository) Update(ctx context.Context, task *models.Task) error {

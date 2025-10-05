@@ -16,7 +16,7 @@ var (
 type TaskService interface {
 	CreateTask(ctx context.Context, req *models.CreateTaskRequest) (*models.Task, error)
 	GetTask(ctx context.Context, id int64) (*models.Task, error)
-	GetAllTasks(ctx context.Context) ([]*models.Task, error)
+	GetAllTasks(ctx context.Context, limit, offset int) ([]*models.Task, int, error)
 	UpdateTask(ctx context.Context, id int64, req *models.UpdateTaskRequest) (*models.Task, error)
 	MarkTaskComplete(ctx context.Context, id int64) error
 	DeleteTask(ctx context.Context, id int64) error
@@ -62,8 +62,8 @@ func (s *taskService) GetTask(ctx context.Context, id int64) (*models.Task, erro
 	return task, nil
 }
 
-func (s *taskService) GetAllTasks(ctx context.Context) ([]*models.Task, error) {
-	return s.repo.GetAll(ctx)
+func (s *taskService) GetAllTasks(ctx context.Context, limit, offset int) ([]*models.Task, int, error) {
+	return s.repo.GetAll(ctx, limit, offset)
 }
 
 func (s *taskService) UpdateTask(ctx context.Context, id int64, req *models.UpdateTaskRequest) (*models.Task, error) {

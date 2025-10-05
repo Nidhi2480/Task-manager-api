@@ -38,12 +38,12 @@ func (m *MockTaskService) GetTask(ctx context.Context, id int64) (*models.Task, 
 	return nil, args.Error(1)
 }
 
-func (m *MockTaskService) GetAllTasks(ctx context.Context) ([]*models.Task, error) {
-	args := m.Called(ctx)
+func (m *MockTaskService) GetAllTasks(ctx context.Context, limit int, offset int) ([]*models.Task, int, error) {
+	args := m.Called(ctx, limit, offset)
 	if t := args.Get(0); t != nil {
-		return t.([]*models.Task), args.Error(1)
+		return t.([]*models.Task), args.Int(1), args.Error(2)
 	}
-	return nil, args.Error(1)
+	return nil, 0, args.Error(2)
 }
 
 func (m *MockTaskService) UpdateTask(ctx context.Context, id int64, req *models.UpdateTaskRequest) (*models.Task, error) {
@@ -179,20 +179,29 @@ func TestGetTask(t *testing.T) {
 	assert.Equal(t, task.ID, res.ID)
 	mockSvc.AssertExpectations(t)
 }
-
 func TestGetAllTasks(t *testing.T) {
 	mockSvc := new(MockTaskService)
 	handler := handlers.NewTaskHandler(mockSvc)
 
 	tasks := []*models.Task{{ID: 1}, {ID: 2}}
-	mockSvc.On("GetAllTasks", mock.Anything).Return(tasks, nil)
+	total := 2
 
-	rr := makeRequest(t, handler.GetAllTasks, "GET", "/tasks", nil)
+	mockSvc.On("GetAllTasks", mock.Anything, 10, 0).Return(tasks, total, nil)
+
+	req := httptest.NewRequest("GET", "/tasks?page=1&limit=10", nil)
+	rr := httptest.NewRecorder()
+
+	handler.GetAllTasks(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var res []*models.Task
-	json.Unmarshal(rr.Body.Bytes(), &res)
-	assert.Len(t, res, 2)
+
+	var res map[string]interface{}
+	err := json.Unmarshal(rr.Body.Bytes(), &res)
+	assert.NoError(t, err)
+
+	assert.Equal(t, float64(total), res["total"])
+	assert.Len(t, res["data"].([]interface{}), 2)
+
 	mockSvc.AssertExpectations(t)
 }
 

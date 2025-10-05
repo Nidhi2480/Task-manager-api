@@ -73,14 +73,34 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 func (h *TaskHandler) GetAllTasks(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Handler triggered: %s %s", r.Method, r.URL.Path)
 
-	tasks, err := h.service.GetAllTasks(r.Context())
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || limit < 1 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	tasks, total, err := h.service.GetAllTasks(r.Context(), limit, offset)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
+	response := map[string]interface{}{
+		"page":       page,
+		"limit":      limit,
+		"total":      total,
+		"totalPages": (int(total) + limit - 1) / limit,
+		"data":       tasks,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
